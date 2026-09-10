@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Environment variables
+.env
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# Generated files
+artifacts/
+reports/
+
+# Ansible
+*.retry
+
+# Containerlab
+.clab/
+clab-*/
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,38 @@
+devices:
+  leaf-1:
+    hostname: leaf-1
+    container: clab-bgp-automation-leaf1
+    role: leaf
+    asn: 65101
+    expected_neighbors:
+      - 10.0.11.1
+      - 10.0.12.1
+    expected_routes:
+      - 10.10.2.1/32
+  leaf-2:
+    hostname: leaf-2
+    container: clab-bgp-automation-leaf2
+    role: leaf
+    asn: 65102
+    expected_neighbors:
+      - 10.0.21.1
+      - 10.0.22.1
+    expected_routes:
+      - 10.10.1.1/32
+  spine-1:
+    hostname: spine-1
+    container: clab-bgp-automation-spine1
+    role: spine
+    asn: 65001
+    expected_neighbors:
+     - 10.0.11.2
+     - 10.0.21.2
+  spine-2:
+    hostname: spine-2
+    container: clab-bgp-automation-spine2
+    role: spine
+    asn: 65002
+    expected_neighbors:
+     - 10.0.12.2
+     - 10.0.22.2
+     

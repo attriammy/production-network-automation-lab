@@ -1,5 +1,5 @@
+from device_executor import DeviceCommandError, run_frr_command
 from inventory_loader import load_inventory
-from device_executor import run_frr_command, DeviceCommandError
 
 INVENTORY_FILE = "inventory/devices.yml"
 

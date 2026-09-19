@@ -1,5 +1,7 @@
 from pathlib import Path
+
 import yaml
+
 
 def load_inventory(file_path:str) -> dict:
     """
@@ -17,7 +19,7 @@ def load_inventory(file_path:str) -> dict:
     with open(file_path, "r", encoding="utf-8") as file:
         data = yaml.safe_load(file)
     if not data:
-        raise ValueError(f"Inventory must contain a 'devices' section")
+        raise ValueError("Inventory must contain a 'devices' section")
     return data["devices"]
 
 if __name__ == "__main__":

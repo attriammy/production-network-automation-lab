@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(
     __file__
 ).resolve().parents[2]
@@ -18,7 +17,7 @@ sys.path.insert(
 )
 
 
-from bgp_validator import (  # noqa: E402
+from bgp_validator import (
     validate_neighbors,
     validate_routes,
 )

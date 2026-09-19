@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 PYTHON_DIR = (
@@ -25,7 +24,6 @@ from ansible_runner import rollback_bgp_policy
 from bgp_validator import validate_network
 from change_loader import load_change
 from path_validator import get_best_path
-
 
 LEAF1 = "clab-bgp-automation-leaf1"
 PREFIX = "10.10.2.1/32"
@@ -48,6 +46,7 @@ def run_change(
         cwd=PROJECT_ROOT,
         capture_output=True,
         text=True,
+        check=False,
     )
 
 

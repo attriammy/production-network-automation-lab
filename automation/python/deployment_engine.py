@@ -4,18 +4,14 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from bgp_validator import validate_network
-from change_loader import load_change
-from device_executor import (
-    DeviceCommandError,
-    run_frr_commands,
-)
-from path_validator import get_best_path
 from ansible_runner import (
     AnsibleExecutionError,
     deploy_bgp_policy,
     rollback_bgp_policy,
 )
+from bgp_validator import validate_network
+from change_loader import load_change
+from path_validator import get_best_path
 
 REPORT_DIRECTORY = Path("reports")
 
@@ -31,19 +27,19 @@ def create_policy_commands(
         "configure terminal",
 
         f"route-map {policy['name']} permit 10",
-        f"set local-preference "
+        "set local-preference ",
         f"{policy['local_preference']}",
 
         f"router bgp {target['asn']}",
         "address-family ipv4 unicast",
 
-        f"neighbor {policy['neighbor']} "
-        f"route-map {policy['name']} "
+        f"neighbor {policy['neighbor']} ",
+        f"route-map {policy['name']} ",
         f"{policy['direction']}",
 
         "end",
 
-        f"clear bgp {policy['neighbor']} soft "
+        f"clear bgp {policy['neighbor']} soft ",
         f"{policy['direction']}",
     ]
 
@@ -62,8 +58,8 @@ def create_rollback_commands(
         f"router bgp {target['asn']}",
         "address-family ipv4 unicast",
 
-        f"neighbor {policy['neighbor']} "
-        f"route-map {rollback['policy_name']} "
+        f"neighbor {policy['neighbor']} ",
+        f"route-map {rollback['policy_name']} ",
         f"{policy['direction']}",
 
         "exit-address-family",
@@ -72,7 +68,7 @@ def create_rollback_commands(
 
         "end",
 
-        f"clear bgp {policy['neighbor']} soft "
+        f"clear bgp {policy['neighbor']} soft ",
         f"{policy['direction']}",
     ]
 
@@ -243,7 +239,7 @@ def execute_change(
 
     try:
 
-        ansible_output = deploy_bgp_policy(change)
+        deploy_bgp_policy(change)
 
         report["deployment"] = "SUCCESS"
 

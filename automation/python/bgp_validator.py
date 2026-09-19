@@ -1,10 +1,10 @@
 import json
 
-from inventory_loader import load_inventory
 from device_executor import (
     DeviceCommandError,
     run_frr_command,
 )
+from inventory_loader import load_inventory
 
 INVENTORY_FILE = "inventory/devices.yml"
 

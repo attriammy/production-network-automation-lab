@@ -11,7 +11,11 @@ from device_executor import (
     run_frr_commands,
 )
 from path_validator import get_best_path
-
+from ansible_runner import (
+    AnsibleExecutionError,
+    deploy_bgp_policy,
+    rollback_bgp_policy,
+)
 
 REPORT_DIRECTORY = Path("reports")
 
@@ -94,6 +98,7 @@ def validate_intent(
     )
 
     return passed, actual_next_hop
+
 def validate_rollback(
     change: dict,
 ) -> tuple[bool, dict]:
@@ -238,18 +243,13 @@ def execute_change(
 
     try:
 
-        commands = create_policy_commands(
-            change
-        )
-
-        run_frr_commands(
-            change["target"]["container"],
-            commands,
-        )
+        ansible_output = deploy_bgp_policy(change)
 
         report["deployment"] = "SUCCESS"
 
-    except DeviceCommandError as exc:
+        report["deployment_engine"] = "ansible"
+
+    except AnsibleExecutionError as exc:
 
         report["deployment"] = "FAILED"
         report["deployment_error"] = str(exc)
@@ -344,16 +344,7 @@ def execute_change(
 
     try:
 
-        rollback_commands = (
-            create_rollback_commands(
-                change
-            )
-        )
-
-        run_frr_commands(
-            change["target"]["container"],
-            rollback_commands,
-        )
+        rollback_bgp_policy(change)
 
         print(
             "Rollback configuration applied."
@@ -391,7 +382,7 @@ def execute_change(
                 "Rollback validation FAILED."
             )
 
-    except DeviceCommandError as exc:
+    except AnsibleExecutionError as exc:
 
         report["rollback"] = {
             "execution": "FAILED",

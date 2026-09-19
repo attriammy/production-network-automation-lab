@@ -13,7 +13,6 @@ def run_frr_command(
     """Execute a single FRR show/operational command."""
 
     docker_command = [
-        "sudo",
         "docker",
         "exec",
         container,
@@ -53,7 +52,6 @@ def run_frr_commands(
     """Execute multiple vtysh commands in one session."""
 
     docker_command = [
-        "sudo",
         "docker",
         "exec",
         container,

@@ -1,0 +1,41 @@
+---
+- name: Validate rollback variables
+  ansible.builtin.assert:
+    that:
+      - policy_name is defined
+      - rollback_policy_name is defined
+      - policy_neighbor is defined
+      - policy_direction is defined
+      - bgp_asn is defined
+      - container_name is defined
+
+- name: Restore previous BGP policy
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - "{{ container_name }}"
+      - vtysh
+      - -c
+      - configure terminal
+      - -c
+      - "router bgp {{ bgp_asn }}"
+      - -c
+      - address-family ipv4 unicast
+      - -c
+      - >-
+        neighbor {{ policy_neighbor }}
+        route-map {{ rollback_policy_name }}
+        {{ policy_direction }}
+      - -c
+      - exit-address-family
+      - -c
+      - "no route-map {{ policy_name }} permit 10"
+      - -c
+      - end
+      - -c
+      - >-
+        clear bgp {{ policy_neighbor }}
+        soft {{ policy_direction }}
+  register: rollback_result
+  changed_when: true

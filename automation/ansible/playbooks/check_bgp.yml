@@ -1,0 +1,23 @@
+---
+- name: Collect BGP state
+  hosts: all
+  gather_facts: false
+  connection: local
+
+  tasks:
+
+    - name: Collect BGP summary
+      ansible.builtin.command:
+        argv:
+          - docker
+          - exec
+          - "{{ container_name }}"
+          - vtysh
+          - -c
+          - show ip bgp summary
+      register: bgp_output
+      changed_when: false
+
+    - name: Display BGP summary
+      ansible.builtin.debug:
+        var: bgp_output.stdout

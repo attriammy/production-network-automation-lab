@@ -1,0 +1,8 @@
+---
+- name: Deploy BGP routing policy
+  hosts: "{{ target_device }}"
+  gather_facts: false
+  connection: local
+
+  roles:
+    - role: bgp_policy

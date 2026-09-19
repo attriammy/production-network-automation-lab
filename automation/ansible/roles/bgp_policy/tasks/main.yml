@@ -1,0 +1,41 @@
+---
+- name: Validate required policy variables
+  ansible.builtin.assert:
+    that:
+      - policy_name is defined
+      - policy_neighbor is defined
+      - local_preference is defined
+      - policy_direction is defined
+      - bgp_asn is defined
+      - container_name is defined
+
+- name: Apply BGP local preference policy
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - "{{ container_name }}"
+      - vtysh
+      - -c
+      - configure terminal
+      - -c
+      - "route-map {{ policy_name }} permit 10"
+      - -c
+      - "set local-preference {{ local_preference }}"
+      - -c
+      - "router bgp {{ bgp_asn }}"
+      - -c
+      - address-family ipv4 unicast
+      - -c
+      - >-
+        neighbor {{ policy_neighbor }}
+        route-map {{ policy_name }}
+        {{ policy_direction }}
+      - -c
+      - end
+      - -c
+      - >-
+        clear bgp {{ policy_neighbor }}
+        soft {{ policy_direction }}
+  register: policy_result
+  changed_when: true

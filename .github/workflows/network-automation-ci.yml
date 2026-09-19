@@ -77,18 +77,23 @@ jobs:
       - name: Verify Containerlab
         run: |
           containerlab version
+      
+      - name: Verify topology files
+        run: |
+          echo "Workspace: ${GITHUB_WORKSPACE}"
+          ls -la "${GITHUB_WORKSPACE}/topology"
+          ls -la "${GITHUB_WORKSPACE}/topology/configs"
+          test -f "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
 
       - name: Deploy FRR topology
         run: |
-          cd topology
           sudo containerlab deploy \
-            --topo topology.clab.yml
+            --topo "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
 
       - name: Show topology
         run: |
-          cd topology
           sudo containerlab inspect \
-            --topo topology.clab.yml
+            --topo "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
 
       - name: Wait for BGP convergence
         run: |
@@ -127,7 +132,6 @@ jobs:
       - name: Destroy Containerlab topology
         if: always()
         run: |
-          cd topology
           sudo containerlab destroy \
-            --topo topology.clab.yml \
+            --topo "${GITHUB_WORKSPACE}/topology/topology.clab.yml" \
             --cleanup

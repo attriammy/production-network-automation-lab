@@ -1,0 +1,22 @@
+change:
+  id: CHG-002
+  description: Prefer spine1 for leaf2 loopback traffic
+
+  target:
+    device: leaf1
+    container: clab-bgp-automation-leaf1
+    asn: 65101
+
+  policy:
+    name: PREFER-SPINE1
+    neighbor: 10.0.11.1
+    local_preference: 200
+    direction: in
+
+  validation:
+    prefix: 10.10.2.1/32
+    expected_next_hop: 192.0.2.100
+
+  rollback:
+    policy_name: ALLOW-ALL
+    expected_next_hop: 10.0.12.1

@@ -264,6 +264,12 @@ jobs:
           test -f \
             "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
 
+      - name: Validate Containerlab topology
+        run: |
+          sudo containerlab \
+            -t "${GITHUB_WORKSPACE}/topology/topology.clab.yml" \
+            validate
+            
 
       # --------------------------------------------------------
       # Deploy virtual network
@@ -272,14 +278,13 @@ jobs:
       - name: Deploy FRR topology
         run: |
           sudo containerlab deploy \
-            --topo "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
+            --t "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
 
 
       - name: Show Containerlab topology
         run: |
           sudo containerlab inspect \
-            --topo "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
-
+            --t "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
 
       - name: Verify FRR containers
         run: |
@@ -484,7 +489,7 @@ jobs:
         if: always()
         run: |
           sudo containerlab destroy \
-            --topo "${GITHUB_WORKSPACE}/topology/topology.clab.yml" \
+            --t "${GITHUB_WORKSPACE}/topology/topology.clab.yml" \
             --cleanup
           ls -la "${GITHUB_WORKSPACE}/topology"
           ls -la "${GITHUB_WORKSPACE}/topology/configs"

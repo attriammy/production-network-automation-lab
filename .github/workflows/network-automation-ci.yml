@@ -80,7 +80,412 @@ jobs:
       
       - name: Verify topology files
         run: |
-          echo "Workspace: ${GITHUB_WORKSPACE}"
+          echo "Workspace: ${GITHUB_WORKSPACE}"name: Network Automation CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+
+jobs:
+
+  # ============================================================
+  # JOB 1
+  # Fast validation that does not require network infrastructure
+  # ============================================================
+
+  code-validation:
+
+    name: Code Validation
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+
+      - name: Python static analysis
+        run: |
+          ruff check automation/python tests
+
+
+      - name: Run unit tests
+        run: |
+          pytest -v tests/unit
+
+
+      - name: Validate change request
+        run: |
+          python automation/python/change_loader.py
+
+
+      - name: Validate Ansible syntax
+        working-directory: automation/ansible
+        run: |
+          ansible-playbook \
+            playbooks/deploy_bgp_policy.yml \
+            --syntax-check \
+            -e target_device=leaf1
+
+          ansible-playbook \
+            playbooks/rollback_bgp_policy.yml \
+            --syntax-check \
+            -e target_device=leaf1
+
+
+  # ============================================================
+  # JOB 2
+  # Real FRR + Containerlab network integration tests
+  # ============================================================
+
+  network-integration:
+
+    name: Containerlab Integration
+
+    runs-on: ubuntu-latest
+
+    needs:
+      - code-validation
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+
+      # --------------------------------------------------------
+      # Docker validation
+      # --------------------------------------------------------
+
+      - name: Verify Docker
+        run: |
+          docker version
+          docker ps
+
+
+      # --------------------------------------------------------
+      # Containerlab installation
+      # --------------------------------------------------------
+
+      - name: Install Containerlab
+        run: |
+          bash -c "$(curl -sL https://get.containerlab.dev)"
+
+
+      - name: Verify Containerlab
+        run: |
+          containerlab version
+
+
+      # --------------------------------------------------------
+      # Verify repository topology
+      # --------------------------------------------------------
+
+      - name: Verify topology files
+        run: |
+          echo "======================================"
+          echo "GitHub workspace"
+          echo "======================================"
+
+          echo "${GITHUB_WORKSPACE}"
+
+          echo
+          echo "======================================"
+          echo "Repository root"
+          echo "======================================"
+
+          pwd
+          ls -la
+
+          echo
+          echo "======================================"
+          echo "Topology directory"
+          echo "======================================"
+
+          ls -la "${GITHUB_WORKSPACE}/topology"
+
+          echo
+          echo "======================================"
+          echo "Topology configuration directories"
+          echo "======================================"
+
+          find "${GITHUB_WORKSPACE}/topology/configs" \
+            -maxdepth 2 \
+            -type f \
+            -print
+
+          echo
+          echo "======================================"
+          echo "Topology file"
+          echo "======================================"
+
+          ls -l \
+            "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
+
+          echo
+          echo "======================================"
+          echo "Topology contents"
+          echo "======================================"
+
+          cat \
+            "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
+
+          test -f \
+            "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
+
+
+      # --------------------------------------------------------
+      # Deploy virtual network
+      # --------------------------------------------------------
+
+      - name: Deploy FRR topology
+        run: |
+          sudo containerlab deploy \
+            --topo "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
+
+
+      - name: Show Containerlab topology
+        run: |
+          sudo containerlab inspect \
+            --topo "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
+
+
+      - name: Verify FRR containers
+        run: |
+          echo "======================================"
+          echo "Running containers"
+          echo "======================================"
+
+          docker ps
+
+
+      # --------------------------------------------------------
+      # Allow routing protocols to converge
+      # --------------------------------------------------------
+
+      - name: Wait for BGP convergence
+        run: |
+          echo "Waiting for BGP convergence..."
+          sleep 15
+
+
+      # --------------------------------------------------------
+      # Initial network diagnostics
+      # --------------------------------------------------------
+
+      - name: Verify leaf1 BGP
+        run: |
+          docker exec \
+            clab-bgp-automation-leaf1 \
+            vtysh \
+            -c "show ip bgp summary"
+
+          docker exec \
+            clab-bgp-automation-leaf1 \
+            vtysh \
+            -c "show ip bgp"
+
+
+      - name: Verify leaf2 BGP
+        run: |
+          docker exec \
+            clab-bgp-automation-leaf2 \
+            vtysh \
+            -c "show ip bgp summary"
+
+          docker exec \
+            clab-bgp-automation-leaf2 \
+            vtysh \
+            -c "show ip bgp"
+
+
+      # --------------------------------------------------------
+      # Run real network integration tests
+      # --------------------------------------------------------
+
+      - name: Run network integration tests
+        run: |
+          pytest \
+            -v \
+            -s \
+            tests/integration
+
+
+      # --------------------------------------------------------
+      # Preserve generated audit reports
+      # --------------------------------------------------------
+
+      - name: Upload change reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: network-change-reports
+          path: reports/
+          if-no-files-found: ignore
+
+
+      # --------------------------------------------------------
+      # Diagnostics
+      # Only runs if something above fails
+      # --------------------------------------------------------
+
+      - name: Collect diagnostics on failure
+        if: failure()
+        run: |
+          echo "======================================"
+          echo "DOCKER CONTAINERS"
+          echo "======================================"
+
+          docker ps -a || true
+
+
+          echo
+          echo "======================================"
+          echo "LEAF1 BGP SUMMARY"
+          echo "======================================"
+
+          docker exec \
+            clab-bgp-automation-leaf1 \
+            vtysh \
+            -c "show ip bgp summary" \
+            || true
+
+
+          echo
+          echo "======================================"
+          echo "LEAF1 BGP TABLE"
+          echo "======================================"
+
+          docker exec \
+            clab-bgp-automation-leaf1 \
+            vtysh \
+            -c "show ip bgp" \
+            || true
+
+
+          echo
+          echo "======================================"
+          echo "LEAF1 RUNNING CONFIG"
+          echo "======================================"
+
+          docker exec \
+            clab-bgp-automation-leaf1 \
+            vtysh \
+            -c "show running-config" \
+            || true
+
+
+          echo
+          echo "======================================"
+          echo "LEAF2 BGP SUMMARY"
+          echo "======================================"
+
+          docker exec \
+            clab-bgp-automation-leaf2 \
+            vtysh \
+            -c "show ip bgp summary" \
+            || true
+
+
+          echo
+          echo "======================================"
+          echo "LEAF2 BGP TABLE"
+          echo "======================================"
+
+          docker exec \
+            clab-bgp-automation-leaf2 \
+            vtysh \
+            -c "show ip bgp" \
+            || true
+
+
+          echo
+          echo "======================================"
+          echo "SPINE1 BGP SUMMARY"
+          echo "======================================"
+
+          docker exec \
+            clab-bgp-automation-spine1 \
+            vtysh \
+            -c "show ip bgp summary" \
+            || true
+
+
+          echo
+          echo "======================================"
+          echo "SPINE2 BGP SUMMARY"
+          echo "======================================"
+
+          docker exec \
+            clab-bgp-automation-spine2 \
+            vtysh \
+            -c "show ip bgp summary" \
+            || true
+
+
+          echo
+          echo "======================================"
+          echo "CONTAINER LOGS"
+          echo "======================================"
+
+          docker logs \
+            clab-bgp-automation-leaf1 \
+            || true
+
+          docker logs \
+            clab-bgp-automation-leaf2 \
+            || true
+
+          docker logs \
+            clab-bgp-automation-spine1 \
+            || true
+
+          docker logs \
+            clab-bgp-automation-spine2 \
+            || true
+
+
+      # --------------------------------------------------------
+      # Cleanup must always run
+      # --------------------------------------------------------
+
+      - name: Destroy Containerlab topology
+        if: always()
+        run: |
+          sudo containerlab destroy \
+            --topo "${GITHUB_WORKSPACE}/topology/topology.clab.yml" \
+            --cleanup
           ls -la "${GITHUB_WORKSPACE}/topology"
           ls -la "${GITHUB_WORKSPACE}/topology/configs"
           test -f "${GITHUB_WORKSPACE}/topology/topology.clab.yml"
